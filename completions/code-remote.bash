@@ -4,15 +4,48 @@
 _code_remote_hosts() {
   local hosts=""
 
-  if [[ -r "$HOME/.ssh/config" ]]; then
+  # Collect SSH config files, honoring Include directives (recursive, cycle-safe).
+  # Supports: multiple paths per line, tilde expansion, relative paths (~/.ssh/),
+  # globs, and nested includes — matching OpenSSH's own Include semantics.
+  local -a ssh_configs=()
+  local -a pending=()
+  local -A visited=()
+  [[ -r "$HOME/.ssh/config" ]] && pending+=("$HOME/.ssh/config")
+  while [[ ${#pending[@]} -gt 0 ]]; do
+    local cfg="${pending[0]}"
+    pending=("${pending[@]:1}")
+    [[ -n "${visited[$cfg]+set}" ]] && continue
+    visited[$cfg]=1
+    ssh_configs+=("$cfg")
+    while IFS= read -r line; do
+      # Strip leading whitespace then check for Include (case-insensitive)
+      local stripped="${line#"${line%%[![:space:]]*}"}"
+      [[ "${stripped,,}" =~ ^include[[:space:]]+(.+)$ ]] || continue
+      local include_val="${BASH_REMATCH[1]}"
+      # Strip trailing whitespace
+      include_val="${include_val%"${include_val##*[![:space:]]}"}"
+      # Split on whitespace — SSH allows multiple paths on one Include line
+      local -a include_paths
+      read -ra include_paths <<< "$include_val"
+      for pattern in "${include_paths[@]}"; do
+        pattern="${pattern/#\~/$HOME}"
+        [[ "$pattern" != /* ]] && pattern="$HOME/.ssh/$pattern"
+        for f in $pattern; do
+          [[ -r "$f" ]] && [[ -z "${visited[$f]+set}" ]] && pending+=("$f")
+        done
+      done
+    done < "$cfg"
+  done
+
+  for cfg in "${ssh_configs[@]}"; do
     hosts+=" $(awk '
       tolower($1)=="host" {
         for (i=2; i<=NF; i++) {
           if ($i !~ /[*?]/) print $i
         }
       }
-    ' "$HOME/.ssh/config" 2>/dev/null)"
-  fi
+    ' "$cfg" 2>/dev/null)"
+  done
 
   if [[ -r "$HOME/.ssh/known_hosts" ]]; then
     hosts+=" $(awk -F'[ ,]' '
