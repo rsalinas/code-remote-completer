@@ -19,7 +19,7 @@ on `<FULL_REMOTE_PATH>` es resol en el servidor remot amb `realpath` (o `readlin
 - Resol rutes relatives respecte a `$HOME` del host remot.
 - Accepta rutes absolutes (`/opt/app`) i amb `~` (`~/repos/app`).
 - Inclou autocompletat Bash:
-  - 1r argument: hosts SSH (des de `~/.ssh/config` i `~/.ssh/known_hosts`).
+  - 1r argument: hosts SSH (des de `~/.ssh/config`, incloent fitxers referenciats per directives `Include`, i `~/.ssh/known_hosts`).
   - 2n argument: rutes del host remot (carpetes i fitxers), similar al flux d'`rsync`.
 
 ## Instal·lació
