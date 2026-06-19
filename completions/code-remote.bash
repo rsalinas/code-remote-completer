@@ -143,7 +143,7 @@ _code_remote_complete() {
     return 0
   fi
 
-  if [[ $COMP_CWORD -eq 2 ]]; then
+  if [[ $COMP_CWORD -ge 2 ]]; then
     local host="${COMP_WORDS[1]}"
     if [[ -n "$host" ]]; then
       local suggestions

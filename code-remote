@@ -18,52 +18,49 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
+if [[ $# -lt 1 ]]; then
   usage >&2
   exit 1
 fi
 
 host="$1"
-input_path="${2:-~}"
+shift
+# No paths given: default to remote $HOME.
+[[ $# -eq 0 ]] && set -- "~"
 
-# Resolve the path on the remote host, relative to $HOME when not absolute.
-resolved_path="$({
-  ssh -o BatchMode=yes "$host" 'bash -s --' "$input_path" <<'EOF'
+# Resolve all paths on the remote host in a single SSH call (one path per line).
+resolved="$(ssh -o BatchMode=yes "$host" 'bash -s --' "$@" <<'EOF' 2>/dev/null
 set -euo pipefail
 
-p="${1:-~}"
-
-case "$p" in
-  ""|"~")
-    target="$HOME"
-    ;;
-  ~/*)
-    target="$HOME/${p#~/}"
-    ;;
-  /*)
-    target="$p"
-    ;;
-  *)
-    target="$HOME/$p"
-    ;;
-esac
-
-if command -v realpath >/dev/null 2>&1; then
-  realpath -m "$target"
-elif command -v readlink >/dev/null 2>&1; then
-  readlink -m "$target"
-else
-  case "$target" in
-    //*) printf "%s\n" "/${target##/}" ;;
-    *) printf "%s\n" "$target" ;;
+for p in "$@"; do
+  case "$p" in
+    ""|"~")  target="$HOME" ;;
+    ~/*)     target="$HOME/${p#~/}" ;;
+    /*)      target="$p" ;;
+    *)       target="$HOME/$p" ;;
   esac
-fi
-EOF
-} 2>/dev/null)"
 
-if [[ -z "$resolved_path" ]]; then
-  echo "Error: no s'ha pogut resoldre la ruta remota en '$host'." >&2
+  if command -v realpath >/dev/null 2>&1; then
+    realpath -m "$target"
+  elif command -v readlink >/dev/null 2>&1; then
+    readlink -m "$target"
+  else
+    case "$target" in
+      //*) printf "%s\n" "/${target##/}" ;;
+      *)   printf "%s\n" "$target" ;;
+    esac
+  fi
+done
+EOF
+)"
+
+if [[ -z "$resolved" ]]; then
+  echo "Error: no s'ha pogut resoldre cap ruta remota en '$host'." >&2
   exit 2
 fi
 
-exec code --remote "ssh-remote+$host" "$resolved_path"
+# One VS Code window per path.
+while IFS= read -r path; do
+  [[ -z "$path" ]] && continue
+  code --remote "ssh-remote+$host" -n "$path"
+done <<<"$resolved"
