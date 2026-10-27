@@ -62,5 +62,6 @@ fi
 # One VS Code window per path.
 while IFS= read -r path; do
   [[ -z "$path" ]] && continue
-  code --remote "ssh-remote+$host" -n "$path"
+  # </dev/null: code reads stdin and would swallow the remaining paths.
+  code --remote "ssh-remote+$host" -n "$path" </dev/null
 done <<<"$resolved"
