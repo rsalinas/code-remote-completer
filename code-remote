@@ -59,6 +59,11 @@ if [[ -z "$resolved" ]]; then
   exit 2
 fi
 
+# Refresh the remote Bitwarden session (UV-specific helper, skipped if absent).
+if [[ -x "$HOME/UV/bin/bw-unlock" ]] && ssh -o BatchMode=yes "$host" 'command -v bw >/dev/null' 2>/dev/null; then
+  "$HOME/UV/bin/bw-unlock" "$host" || true
+fi
+
 # One VS Code window per path.
 while IFS= read -r path; do
   [[ -z "$path" ]] && continue
