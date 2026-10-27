@@ -29,11 +29,11 @@ on `<FULL_REMOTE_PATH>` es resol en el servidor remot amb `realpath` (o `readlin
 Des de este repositori:
 
 ```bash
-chmod +x code-remote
-mkdir -p "$HOME/.local/bin" "$HOME/.local/share/bash-completion/completions"
-cp code-remote "$HOME/.local/bin/code-remote"
-cp completions/code-remote.bash "$HOME/.local/share/bash-completion/completions/code-remote"
+./install.sh
 ```
+
+Crea enllaços simbòlics (no còpies) en `~/.local/bin` i en la carpeta de
+completacions, així que un `git pull` ja actualitza l'ordre instal·lada.
 
 Assegura't que `$HOME/.local/bin` està en el teu `PATH`.
 
